@@ -27,6 +27,7 @@ interface Service {
   vendorId?: {
     businessName: string;
     city?: string;
+    phone?: string;
     experience?: number;
   };
 }
@@ -175,6 +176,9 @@ function ExploreContent() {
                           </p>
                           <p className="text-gray-600 truncate">
                             {s.vendorId.city && <>📍 {s.vendorId.city}</>}
+                          </p>
+                          <p className="text-gray-600 truncate">
+                            {s.vendorId.phone && <> {s.vendorId.phone}</>}
                           </p>
                           {typeof s.vendorId.experience === 'number' && (
                             <p className="text-gray-500">
