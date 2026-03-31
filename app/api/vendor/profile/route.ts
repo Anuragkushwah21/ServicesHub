@@ -4,6 +4,8 @@ import { connectDB } from '@/lib/db';
 import Vendor from '@/lib/models/Vendor';
 import User from '@/lib/models/User';
 import { ApiResponse } from '@/lib/api-response';
+import fs from 'fs';
+import path from 'path';
 
 export async function GET() {
   try {
@@ -23,7 +25,6 @@ export async function GET() {
       return ApiResponse.success(null, 'No vendor profile');
     }
 
-    // frontend में data.data = vendor expect कर रहे हो
     return ApiResponse.success(vendor, 'Profile fetched');
   } catch (error: any) {
     console.error('[VENDOR] ERROR:', error);
@@ -31,10 +32,23 @@ export async function GET() {
   }
 }
 
-// TODO: अपनी upload logic implement करो
-async function uploadLogo(file: File): Promise<string> {
-  return '/uploads/vendor-logo-placeholder.png';
+async function uploadFile(file: Blob, prefix: string): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const ext = (file as any).name?.split('.').pop() || 'png';
+  const fileName = `${prefix}-${Date.now()}.${ext}`;
+  const filePath = path.join(uploadsDir, fileName);
+
+  fs.writeFileSync(filePath, buffer);
+
+  return `/uploads/${fileName}`;
 }
+
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -43,7 +57,6 @@ export async function PUT(request: Request) {
       return ApiResponse.unauthorized('Only vendors allowed');
     }
 
-    // ⬇️ अब JSON नहीं, FormData पढ़ेंगे
     const formData = await request.formData();
 
     const businessName = String(formData.get('businessName') || '');
@@ -57,9 +70,9 @@ export async function PUT(request: Request) {
     const zipCode = String(formData.get('zipCode') || '');
     const website = String(formData.get('website') || '');
     const bankAccount = String(formData.get('bankAccount') || '');
-    const logoFile = formData.get('logo') as File | null;
+    const logoField = formData.get('logo');
+    const bannerField = formData.get('banner');
 
-    // ✅ VALIDATION
     if (!businessName || !description || !businessType) {
       return ApiResponse.error('Required fields missing', 400);
     }
@@ -70,7 +83,6 @@ export async function PUT(request: Request) {
       userId: (session.user as any).id,
     });
 
-    // Create if not exist
     if (!vendor) {
       const user = await User.findById((session.user as any).id);
 
@@ -81,13 +93,18 @@ export async function PUT(request: Request) {
       });
     }
 
-    // अगर logo आया है तो upload करके URL set करो
-    if (logoFile && logoFile.size > 0) {
-      const logoUrl = await uploadLogo(logoFile);
+    // Logo upload
+    if (logoField && logoField instanceof Blob) {
+      const logoUrl = await uploadFile(logoField, 'vendor-logo');
       vendor.logo = logoUrl;
     }
 
-    // Update बाकी fields
+    // Banner upload
+    if (bannerField && bannerField instanceof Blob) {
+      const bannerUrl = await uploadFile(bannerField, 'vendor-banner');
+      vendor.banner = bannerUrl;
+    }
+
     vendor.businessName = businessName;
     vendor.description = description;
     vendor.businessType = businessType;

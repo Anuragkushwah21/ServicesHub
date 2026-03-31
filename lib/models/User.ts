@@ -5,9 +5,11 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: "user" | "vendor" | "admin";
+  role: 'user' | 'vendor' | 'admin';
   isEmailVerified: boolean;
-  isActive: boolean;                    // 👈 add this
+  isActive: boolean;
+  phone?: string;
+  city?: string;
   comparePassword(password: string): Promise<boolean>;
 }
 
@@ -18,19 +20,15 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["user", "vendor", "admin"],
-      default: "user",
+      enum: ['user', 'vendor', 'admin'],
+      default: 'user',
     },
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    isActive: {                          // 👈 new field
-      type: Boolean,
-      default: true,
-    },
+    isEmailVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    phone: { type: String },   // 👈 must be here
+    city: { type: String },    // 👈 must be here
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Hash password

@@ -86,7 +86,6 @@ export default function VendorDashboardPage() {
   useEffect(() => {
     const fetchVendorData = async () => {
       try {
-        // Vendor profile
         const vendorRes = await fetch('/api/vendor/profile');
         const vendorJson = await vendorRes.json();
 
@@ -96,15 +95,13 @@ export default function VendorDashboardPage() {
           setVendor(vendorJson.data);
         }
 
-        // Vendor bookings
         const bookingsRes = await fetch('/api/vendor/bookings');
         const bookingsJson = await bookingsRes.json();
-        console.log('Bookings API ',bookingsJson)
+        console.log('Bookings API ', bookingsJson);
 
         if (!bookingsRes.ok) {
           toast.error(bookingsJson.message || 'Failed to load bookings');
         } else {
-          // API returns: { data: { totalBookings, bookings } }
           const { totalBookings, bookings } = bookingsJson.data || {
             totalBookings: 0,
             bookings: [],
@@ -113,14 +110,11 @@ export default function VendorDashboardPage() {
           const list: Booking[] = Array.isArray(bookings) ? bookings : [];
           setBookings(list);
 
-          const completed = list.filter(
-            (b) => b.status === 'completed',
-          ).length;
+          const completed = list.filter((b) => b.status === 'completed').length;
 
-          const totalEarned = list.reduce(
-            (sum, b) => sum + (b.serviceId?.price || 0),
-            0,
-          );
+          const totalEarned = list
+            .filter((b) => b.status === 'completed')
+            .reduce((sum, b) => sum + (b.serviceId?.price || 0), 0);
 
           setVendorStats({
             totalBookings,
@@ -343,25 +337,27 @@ export default function VendorDashboardPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="all">
                     All ({bookings.length})
                   </TabsTrigger>
-                  <TabsTrigger value="confirmed">
-                    Confirmed (
-                    {bookings.filter((b) => b.status === 'confirmed').length}
-                    )
-                  </TabsTrigger>
-                  <TabsTrigger value="completed">
-                    Completed (
-                    {bookings.filter((b) => b.status === 'completed').length}
-                    )
-                  </TabsTrigger>
+
                   <TabsTrigger value="pending">
-                    Pending (
-                    {bookings.filter((b) => b.status === 'pending').length}
-                    )
+                    Pending ({bookings.filter((b) => b.status === 'pending').length})
                   </TabsTrigger>
+
+                  <TabsTrigger value="confirmed">
+                    Confirmed ({bookings.filter((b) => b.status === 'confirmed').length})
+                  </TabsTrigger>
+
+                  <TabsTrigger value="completed">
+                    Completed ({bookings.filter((b) => b.status === 'completed').length})
+                  </TabsTrigger>
+
+                  <TabsTrigger value="cancelled">
+                    Cancelled ({bookings.filter((b) => b.status === 'cancelled').length})
+                  </TabsTrigger>
+
                 </TabsList>
 
                 {/* All bookings */}
@@ -455,7 +451,7 @@ export default function VendorDashboardPage() {
                 {/* Confirmed */}
                 <TabsContent value="confirmed" className="space-y-4 mt-6">
                   {bookings.filter((b) => b.status === 'confirmed').length >
-                  0 ? (
+                    0 ? (
                     bookings
                       .filter((b) => b.status === 'confirmed')
                       .map((booking) => (
@@ -485,7 +481,7 @@ export default function VendorDashboardPage() {
                 {/* Completed */}
                 <TabsContent value="completed" className="space-y-4 mt-6">
                   {bookings.filter((b) => b.status === 'completed').length >
-                  0 ? (
+                    0 ? (
                     bookings
                       .filter((b) => b.status === 'completed')
                       .map((booking) => (
@@ -516,7 +512,7 @@ export default function VendorDashboardPage() {
                 {/* Pending */}
                 <TabsContent value="pending" className="space-y-4 mt-6">
                   {bookings.filter((b) => b.status === 'pending').length >
-                  0 ? (
+                    0 ? (
                     bookings
                       .filter((b) => b.status === 'pending')
                       .map((booking) => (
@@ -558,6 +554,37 @@ export default function VendorDashboardPage() {
                   ) : (
                     <p className="text-center text-gray-600 py-8">
                       No pending bookings
+                    </p>
+                  )}
+                </TabsContent>
+                {/* Cancelled */}
+                <TabsContent value="cancelled" className="space-y-4 mt-6">
+                  {bookings.filter((b) => b.status === 'cancelled').length > 0 ? (
+                    bookings
+                      .filter((b) => b.status === 'cancelled')
+                      .map((booking) => (
+                        <div key={booking._id} className="p-4 border rounded-lg">
+                          <h3 className="font-semibold">
+                            {booking.serviceId?.name || 'Unknown service'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Cancelled on {new Date(booking.bookingDate).toLocaleDateString()}
+                            {' • '}
+                            {booking.userId?.name || 'Unknown customer'}
+                          </p>
+
+                          <div className="mt-2 flex gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/vendor/booking/${booking._id}`}>
+                                View Details
+                              </Link>
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                  ) : (
+                    <p className="text-center text-gray-600 py-8">
+                      No cancelled bookings
                     </p>
                   )}
                 </TabsContent>

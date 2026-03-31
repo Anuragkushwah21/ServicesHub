@@ -91,35 +91,7 @@ export default function AdminPage() {
     }
   }, [status, router, session]);
 
-  if (status === 'loading' || loading) {
-    return (
-      <>
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
-      </>
-    );
-  }
-
-  if (!stats) {
-    return (
-      <>
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-gray-600">Failed to load admin dashboard</p>
-            </CardContent>
-          </Card>
-        </div>
-      </>
-    );
-  }
-
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-
-  const handleAddCategory = async (e: React.FormEvent) => {
+    const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newCategory.trim()) {
@@ -178,6 +150,34 @@ export default function AdminPage() {
       console.error('[ADMIN] Category deletion error:', error);
     }
   };
+
+  if (status === 'loading' || loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      </>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <>
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-gray-600">Failed to load admin dashboard</p>
+            </CardContent>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   return (
     <>

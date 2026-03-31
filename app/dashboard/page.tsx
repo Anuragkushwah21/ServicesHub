@@ -73,44 +73,47 @@ export default function UserDashboardPage() {
   }, [status, router]);
 
   // Fetch bookings + stats
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const bookingsRes = await fetch('/api/user/bookings');
-        const bookingsJson = await bookingsRes.json();
+ useEffect(() => {
+  const fetchUserData = async () => {
+    try {
+      const bookingsRes = await fetch('/api/user/bookings');
+      const bookingsJson = await bookingsRes.json();
 
-        if (!bookingsRes.ok) {
-          toast.error(bookingsJson.message || 'Failed to load bookings');
-        } else {
-          const list: Booking[] = Array.isArray(bookingsJson.data)
-            ? bookingsJson.data
-            : [];
-          setBookings(list);
+      if (!bookingsRes.ok) {
+        toast.error(bookingsJson.message || 'Failed to load bookings');
+      } else {
+        const list: Booking[] = Array.isArray(bookingsJson.data)
+          ? bookingsJson.data
+          : [];
+        setBookings(list);
 
-          const completed = list.filter((b) => b.status === 'completed').length;
-          const totalSpent = list.reduce((sum, b) => {
+        const completed = list.filter((b) => b.status === 'completed').length;
+
+        const totalSpent = list
+          .filter((b) => b.status === 'completed')
+          .reduce((sum, b) => {
             const price = b?.service?.price;
             return typeof price === 'number' ? sum + price : sum;
           }, 0);
 
-          setUserStats({
-            totalBookings: list.length,
-            completedBookings: completed,
-            totalSpent,
-          });
-        }
-      } catch (err) {
-        console.error('[USER-DASHBOARD] Error:', err);
-        toast.error('Error loading user data');
-      } finally {
-        setLoading(false);
+        setUserStats({
+          totalBookings: list.length,
+          completedBookings: completed,
+          totalSpent,
+        });
       }
-    };
-
-    if (status === 'authenticated') {
-      fetchUserData();
+    } catch (err) {
+      console.error('[USER-DASHBOARD] Error:', err);
+      toast.error('Error loading user data');
+    } finally {
+      setLoading(false);
     }
-  }, [status]);
+  };
+
+  if (status === 'authenticated') {
+    fetchUserData();
+  }
+}, [status]);
 
   // NEW: fetch profile for dashboard card
   useEffect(() => {

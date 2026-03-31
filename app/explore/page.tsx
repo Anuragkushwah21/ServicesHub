@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Footer } from '@/components/footer';
 
 interface Service {
   _id: string;
@@ -134,9 +135,9 @@ function ExploreContent() {
 
                   <SelectContent>
                     <SelectItem value="all">All Prices</SelectItem>
-                    <SelectItem value="budget">Budget (&lt;$100)</SelectItem>
-                    <SelectItem value="mid">Mid ($100–300)</SelectItem>
-                    <SelectItem value="premium">Premium (&gt;$300)</SelectItem>
+                    <SelectItem value="budget">Budget (&lt;₹100)</SelectItem>
+                    <SelectItem value="mid">Mid (₹100–300)</SelectItem>
+                    <SelectItem value="premium">Premium (&gt;₹300)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -205,7 +206,7 @@ function ExploreContent() {
                     {/* Bottom: price + CTA */}
                     <div className="flex justify-between mt-4 items-center">
                       <span className="font-bold text-blue-600">
-                        ${s.price}
+                        ₹{s.price}
                       </span>
 
                       {status === 'loading' ? (
@@ -238,8 +239,8 @@ function ExploreContent() {
             <p className="text-center text-gray-600">No services found</p>
           )}
         </section>
-
       </main>
+      <Footer/>
     </>
   );
 }

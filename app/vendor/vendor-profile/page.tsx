@@ -15,6 +15,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface Vendor {
   _id: string;
@@ -41,7 +43,44 @@ interface Vendor {
   updatedAt?: string;
 }
 
+
+function SafeImage({
+  src,
+  alt,
+  fallbackSrc,
+  className,
+  width,
+  height,
+}: {
+  src?: string | null;
+  alt: string;
+  fallbackSrc: string;
+  className?: string;
+  width: number;
+  height: number;
+}) {
+  const [imgSrc, setImgSrc] = useState(src || fallbackSrc);
+
+  useEffect(() => {
+    setImgSrc(src || fallbackSrc);
+  }, [src, fallbackSrc]);
+
+  return (
+    <Image
+      src={imgSrc}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+      onError={() => setImgSrc(fallbackSrc)}
+    />
+  );
+}
+
 export default function VendorProfilePage() {
+  const bannerFallback = '/uploads/vendor-banner-placeholder.png';
+  const logoFallback = '/uploads/vendor-logo-placeholder.png';
+
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -66,6 +105,7 @@ export default function VendorProfilePage() {
         const res = await fetch('/api/vendor/profile', {
           method: 'GET',
         });
+        console.log('Api responce',res)
 
         const data = await res.json();
 
@@ -130,37 +170,42 @@ export default function VendorProfilePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 py-10">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Top banner + main info */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden relative bg-white">
           {/* Banner */}
-          <div className="h-40 bg-gradient-to-r from-blue-600 to-indigo-600 relative">
-            {vendor.banner && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={vendor.banner}
-                alt="Vendor banner"
-                className="h-40 w-full object-cover"
-              />
-            )}
-            {/* Logo / avatar */}
-            <div className="absolute -bottom-12 left-6 flex items-center gap-4">
-              <div className="h-24 w-24 rounded-full border-4 border-white bg-white overflow-hidden flex items-center justify-center text-3xl font-bold text-blue-600">
+          <div className="h-40 bg-gradient-to-r from-blue-600 to-indigo-600 relative overflow-hidden">
+            <SafeImage
+              src={vendor.banner}
+              alt="Vendor banner"
+              fallbackSrc={bannerFallback}
+              width={1600}
+              height={400}
+              className="h-40 w-full object-cover"
+            />
+          </div>
+
+          {/* Avatar + basic info */}
+          <div className="px-6 pb-4">
+            <div className="-mt-12 flex items-end gap-4">
+              <div className="h-24 w-24 rounded-full border-4 border-white bg-white overflow-hidden flex items-center justify-center text-3xl font-bold text-blue-600 shadow-md">
                 {vendor.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <SafeImage
                     src={vendor.logo}
                     alt={vendor.businessName || 'Vendor logo'}
+                    fallbackSrc={logoFallback}
+                    width={200}
+                    height={200}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  initial
+                  <span>{initial}</span>
                 )}
               </div>
-              <div className="mt-10">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {vendor.businessName || 'Vendor'}
-                  </h1>
-                </div>
+
+              <div className="pb-2">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {vendor.businessName || 'Vendor'}
+                </h1>
+
                 {vendor.city && (
                   <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
                     <MapPin className="h-4 w-4" />
@@ -175,25 +220,16 @@ export default function VendorProfilePage() {
           </div>
 
           {/* Stats row */}
-          <div className="pt-16 px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-white">
+          <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-100">
             <div>
               <p className="text-xs uppercase text-gray-500">Rating</p>
               <div className="flex items-center gap-1 mt-1">
                 <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
                 <span className="text-lg font-semibold">
-                  {Number.isFinite(vendor.rating)
-                    ? vendor.rating.toFixed(1)
-                    : '5.0'}
+                  {Number.isFinite(vendor.rating) ? vendor.rating.toFixed(1) : '5.0'}
                 </span>
                 <span className="text-xs text-gray-500 ml-1">/ 5.0</span>
               </div>
-            </div>
-
-            <div>
-              <p className="text-xs uppercase text-gray-500">Total Bookings</p>
-              <p className="text-lg font-semibold mt-1">
-                {vendor.totalBookings ?? 0}
-              </p>
             </div>
 
             <div>
@@ -205,6 +241,8 @@ export default function VendorProfilePage() {
                 </p>
               </div>
             </div>
+
+            {/* you can add a third stat here if needed */}
           </div>
         </Card>
 

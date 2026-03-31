@@ -21,14 +21,14 @@ interface Service {
   duration: number;
   rating: number;
   totalBookings: number;
-  vendor: {
+  vendorId?: {
     businessName: string;
     description: string;
     city: string;
     isVerified: boolean;
     rating: number;
   };
-  categoryId: {
+  categoryId?: {
     name: string;
     icon: string;
   };
@@ -63,6 +63,7 @@ export default function ServiceDetailPage() {
         const response = await fetch(`/api/vendor/services/${id}`);
         if (response.ok) {
           const data = await response.json();
+          // data.data should already have vendorId populated from API
           setService(data.data);
         } else if (response.status === 404) {
           toast.error('Service not found');
@@ -80,60 +81,68 @@ export default function ServiceDetailPage() {
     fetchService();
   }, [id]);
 
- const handleBooking = async () => {
-  if (!session) {
-    toast.info('Please login to book');
-    router.push('/auth/login');
-    return;
-  }
-
-  if (!id) {
-    toast.error('Invalid service ID');
-    return;
-  }
-
- if (!customerName || !phone || !city || !day || !time) {
-  toast.warn('Please fill all booking details');
-  return;
-}
-
-setBookingLoading(true);
-try {
-  const response = await fetch('/api/bookings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      serviceId: id,
-      bookingDate: day,   // sent as bookingDate
-      bookingTime: time,  // sent as bookingTime
-      customerName,
-      phone,
-      city,
-      notes: '',
-    }),
-  });
-
-    if (response.ok) {
-      const data = await response.json();
-      toast.success('Booking created successfully');
-      router.push(`/booking/${data.data._id}`);
-    } else {
-      toast.error('You have already booked this service at this times');
+  const handleBooking = async () => {
+    if (!session) {
+      toast.info('Please login to book');
+      router.push('/auth/login');
+      return;
     }
-  } catch (error) {
-    console.error('Error creating booking:', error);
-    toast.error('Error creating booking');
-  } finally {
-    setBookingLoading(false);
-  }
-};
 
+    if (!id) {
+      toast.error('Invalid service ID');
+      return;
+    }
+
+    if (!customerName || !phone || !city || !day || !time) {
+      toast.warn('Please fill all booking details');
+      return;
+    }
+
+    const username = session.user?.name || customerName;
+    const email = session.user?.email || '';
+
+    setBookingLoading(true);
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: id,
+          bookingDate: day,   // yyyy-mm-dd (string)
+          bookingTime: time,  // hh:mm
+          notes: '',
+          customer: {
+            username,
+            name: customerName,
+            email,
+            phone,
+            city,
+          },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success('Booking created successfully');
+        router.push(`/booking/${data.data._id}`);
+      } else if (response.status === 400) {
+        toast.error('You have already booked this service at this time');
+      } else {
+        toast.error('Booking failed, please try again');
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast.error('Error creating booking');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
 
   if (loading) {
     return (
       <>
         <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="min-h-screen flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
       </>
@@ -144,15 +153,8 @@ try {
     return (
       <>
         <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <Card>
-            <CardContent className="pt-6 text-center">
-              <p className="text-lg text-gray-600 mb-4">Service not found</p>
-              <Link href="/explore">
-                <Button>Back to Services</Button>
-              </Link>
-            </CardContent>
-          </Card>
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-gray-600">Service not found</p>
         </div>
       </>
     );
@@ -161,164 +163,170 @@ try {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/explore"
-            className="text-blue-600 hover:text-blue-700 mb-6 inline-block"
-          >
-            ← Back to Services
-          </Link>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              <div>
-                <div className="flex items-start justify-between mb-4">
+      <main className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          {/* Service details */}
+          <section className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between gap-3">
                   <div>
-                    <span className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium mb-2">
-                      {service.categoryId.name}
-                    </span>
-                    <h1 className="text-4xl font-bold text-gray-900">
-                      {service.name}
-                    </h1>
+                    <h1 className="text-2xl font-semibold">{service.name}</h1>
+                    <p className="text-sm text-gray-600">
+                      {service.categoryId?.icon} {service.categoryId?.name}
+                    </p>
                   </div>
-                  <div className="text-3xl">{service.categoryId.icon}</div>
-                </div>
+                  <span className="text-2xl font-bold text-blue-600">
+                    ₹{service.price}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700 text-sm">{service.description}</p>
 
-                <div className="flex items-center gap-6 text-lg">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-2">
-                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold">{service.rating}</span>
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span>{service.duration} min</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Users className="h-5 w-5" />
-                    <span>{service.totalBookings} bookings</span>
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    <span>
+                      {service.rating.toFixed(1)} · {service.totalBookings} bookings
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Clock className="h-5 w-5" />
-                    <span>{service.duration} minutes</span>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <span>
+                      By {service.vendorId?.businessName ?? 'Unknown vendor'}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>About This Service</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700">{service.description}</p>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Service Provider</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm text-gray-700">
+                <p className="font-medium">
+                  {service.vendorId?.businessName ?? 'Unknown vendor'}
+                </p>
+                {service.vendorId?.description && (
+                  <p className="text-gray-600">{service.vendorId.description}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                  <span>{service.vendorId?.city ?? 'Unknown location'}</span>
+                </div>
+                {service.vendorId?.isVerified && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Verified vendor · Rating {service.vendorId.rating.toFixed(1)}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </section>
 
-            {/* Booking Card + Form */}
-            <div className="lg:col-span-1">
-              <Card className="sticky top-24">
-                <CardHeader>
-                  <CardTitle>Ready to book?</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-gray-600 text-sm mb-2">Price</p>
-                    <p className="text-4xl font-bold text-blue-600">
-                      ${service.price}
-                    </p>
+          {/* Booking card */}
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle>Book this service</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="space-y-1">
+                    <Label htmlFor="customerName">Name</Label>
+                    <Input
+                      id="customerName"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Your name"
+                    />
                   </div>
 
-                  <div className="space-y-2 pt-4 border-t">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Duration</span>
-                      <span className="font-medium">
-                        {service.duration} min
+                  <div className="space-y-1">
+                    <Label htmlFor="phone">Phone</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-2 border rounded-md bg-gray-50 text-sm">
+                        +91
                       </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Service Fee</span>
-                      <span className="font-medium">${service.price}</span>
-                    </div>
-                  </div>
-
-                  {/* Booking form */}
-                  <div className="space-y-3 pt-4 border-t">
-                    <div className="space-y-1">
-                      <Label htmlFor="customerName">Name</Label>
                       <Input
-                        id="customerName"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                        placeholder="Your name"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="phone">Phone</Label>
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-2 border rounded-md bg-gray-50 text-sm">
-                          +91
-                        </span>
-                        <Input
-                          id="phone"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="Your phone number"
-                          maxLength={10}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="City / Address"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="day">Day</Label>
-                      <Input
-                        id="day"
-                        type="date"
-                        value={day}
-                        onChange={(e) => setDay(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="time">Time</Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={time}
-                        onChange={(e) => setTime(e.target.value)}
+                        id="phone"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Your phone number"
+                        maxLength={10}
                       />
                     </div>
                   </div>
 
-                  <Button
-                    onClick={handleBooking}
-                    disabled={bookingLoading}
-                    className="w-full mt-4"
-                    size="lg"
-                  >
-                    {bookingLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Booking...
-                      </>
-                    ) : (
-                      'Book Service'
-                    )}
-                  </Button>
+                  <div className="space-y-1">
+                    <Label htmlFor="city">City / Address</Label>
+                    <Input
+                      id="city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Bengaluru / your area"
+                    />
+                  </div>
 
-                  {!session && (
-                    <p className="text-xs text-gray-500 text-center">
-                      You&apos;ll be redirected to sign in
-                    </p>
+                  <div className="space-y-1">
+                    <Label htmlFor="day">Day</Label>
+                    <Input
+                      id="day"
+                      type="date"
+                      value={day}
+                      onChange={(e) => setDay(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="time">Time</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full mt-2"
+                  onClick={handleBooking}
+                  disabled={bookingLoading}
+                >
+                  {bookingLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating booking...
+                    </>
+                  ) : (
+                    'Book Now'
                   )}
-                </CardContent>
-              </Card>
+                </Button>
+
+                {!session && (
+                  <p className="text-xs text-gray-500 text-center">
+                    You will be asked to login before completing booking.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              <p>
+                By booking, you agree to the{' '}
+                <Link href="/terms" className="text-blue-600 hover:underline">
+                  Terms of Service
+                </Link>
+                .
+              </p>
             </div>
-          </div>
+          </section>
         </div>
       </main>
     </>

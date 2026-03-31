@@ -18,16 +18,16 @@ export async function GET() {
 
     await connectDB();
 
-    // Count totals
     const totalUsers = await User.countDocuments({ role: 'user' });
     const totalVendors = await User.countDocuments({ role: 'vendor' });
     const totalBookings = await Booking.countDocuments();
 
-    // Calculate revenue
-    const bookings = await Booking.find();
-    const totalRevenue = bookings.reduce((sum, b) => sum + b.price, 0);
+    const completedBookings = await Booking.find({ status: 'completed' });
+    const totalRevenue = completedBookings.reduce(
+      (sum, b) => sum + (b.price || 0),
+      0
+    );
 
-    // Bookings by status
     const bookingsByStatus = {
       pending: await Booking.countDocuments({ status: 'pending' }),
       confirmed: await Booking.countDocuments({ status: 'confirmed' }),
@@ -35,19 +35,26 @@ export async function GET() {
       cancelled: await Booking.countDocuments({ status: 'cancelled' }),
     };
 
-    // Revenue by category
     const categories = await Category.find();
     const revenueByCategory = await Promise.all(
       categories.map(async (cat) => {
         const services = await Service.find({ categoryId: cat._id });
         const serviceIds = services.map((s) => s._id);
-        const categoryBookings = await Booking.find({ serviceId: { $in: serviceIds } });
-        const revenue = categoryBookings.reduce((sum, b) => sum + b.price, 0);
+
+        const categoryBookings = await Booking.find({
+          serviceId: { $in: serviceIds },
+          status: 'completed',
+        });
+
+        const revenue = categoryBookings.reduce(
+          (sum, b) => sum + (b.price || 0),
+          0
+        );
+
         return { name: cat.name, value: revenue };
       })
     );
 
-    // Revenue over time (last 7 days)
     const revenueOverTime = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
@@ -57,11 +64,19 @@ export async function GET() {
 
       const dayBookings = await Booking.find({
         createdAt: { $gte: dayStart, $lte: dayEnd },
+        status: 'completed',
       });
 
-      const dayRevenue = dayBookings.reduce((sum, b) => sum + b.price, 0);
+      const dayRevenue = dayBookings.reduce(
+        (sum, b) => sum + (b.price || 0),
+        0
+      );
+
       revenueOverTime.push({
-        date: dayStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        date: dayStart.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        }),
         revenue: dayRevenue,
       });
     }

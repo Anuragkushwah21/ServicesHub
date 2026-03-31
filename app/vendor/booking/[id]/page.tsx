@@ -11,9 +11,8 @@ import {
   Loader2,
   Calendar,
   Clock,
-  DollarSign,
-  MapPin,
   ArrowLeft,
+  IndianRupee,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -23,6 +22,9 @@ interface BookingDetail {
   bookingDate: string;
   bookingTime: string;
   notes?: string;
+  price: number;                // 👈 from booking
+  customerCity?: string;        // 👈 extra fields saved in booking
+  customerPhone?: string;
   serviceId: {
     name: string;
     price: number;
@@ -197,33 +199,60 @@ export default function VendorBookingDetailPage() {
                 <span className="text-sm">{booking.bookingTime}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-700">
-                <DollarSign className="h-4 w-4" />
+                <IndianRupee className="h-4 w-4" />
                 <span className="text-sm font-semibold">
-                  ₹{booking.serviceId?.price ?? 0}
+                  {booking.price ?? booking.serviceId?.price ?? 0}
                 </span>
               </div>
             </div>
 
-            {/* Customer info */}
-            <div>
-              <h3 className="font-semibold text-sm text-gray-900 mb-2">
-                Customer details
-              </h3>
-              <div className="space-y-1 text-sm text-gray-700">
-                <p>Name: {booking.userId?.name}</p>
-                <p>Email: {booking.userId?.email}</p>
-                {booking.userId?.city && <p>City: {booking.userId.city}</p>}
+            {/* Booking info */}
+            <div className="mt-6 grid gap-4 sm:grid-cols-3 text-sm text-gray-700 border-t pt-4">
+              {/* Customer */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Customer</h3>
+                <div className="space-y-1">
+                  <p>Name: {booking.userId?.name ?? 'Unknown'}</p>
+                  <p>Email: {booking.userId?.email ?? 'Not provided'}</p>
+                  <p>
+                    City:{' '}
+                    {booking.userId?.city ||
+                      booking.customerCity ||
+                      'Not provided'}
+                  </p>
+                  {booking.customerPhone && (
+                    <p>Phone: {booking.customerPhone}</p>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Service info */}
-            <div>
-              <h3 className="font-semibold text-sm text-gray-900 mb-2">
-                Service details
-              </h3>
-              <div className="space-y-1 text-sm text-gray-700">
-                <p>Service: {booking.serviceId?.name}</p>
-                <p>Duration: {booking.serviceId?.duration} min</p>
+              {/* Service */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Service</h3>
+                <div className="space-y-1">
+                  <p>Service: {booking.serviceId?.name ?? 'Unknown'}</p>
+                  <p>Duration: {booking.serviceId?.duration ?? 0} min</p>
+                  <p>Price: ₹{booking.price}</p>
+                </div>
+              </div>
+
+              {/* Booking */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-2">Booking</h3>
+                <div className="space-y-1">
+                  <p>
+                    Date:{' '}
+                    {booking.bookingDate &&
+                      new Date(booking.bookingDate).toLocaleDateString()}
+                  </p>
+                  <p>Time: {booking.bookingTime}</p>
+                  <p>
+                    Status:{' '}
+                    {booking.status.charAt(0).toUpperCase() +
+                      booking.status.slice(1)}
+                  </p>
+                  {booking.notes && <p>Notes: {booking.notes}</p>}
+                </div>
               </div>
             </div>
 
@@ -235,9 +264,9 @@ export default function VendorBookingDetailPage() {
                   disabled={updating}
                   onClick={() => handleUpdateStatus('confirmed')}
                 >
-                  {updating ? (
+                  {updating && (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : null}
+                  )}
                   Mark as Confirmed
                 </Button>
               )}
@@ -248,9 +277,9 @@ export default function VendorBookingDetailPage() {
                   disabled={updating}
                   onClick={() => handleUpdateStatus('completed')}
                 >
-                  {updating ? (
+                  {updating && (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : null}
+                  )}
                   Mark as Completed
                 </Button>
               )}
@@ -262,9 +291,9 @@ export default function VendorBookingDetailPage() {
                   disabled={updating}
                   onClick={() => handleUpdateStatus('cancelled')}
                 >
-                  {updating ? (
+                  {updating && (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  ) : null}
+                  )}
                   Cancel Booking
                 </Button>
               )}
